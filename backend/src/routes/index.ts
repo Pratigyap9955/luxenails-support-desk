@@ -9,6 +9,7 @@ import { escalationsRouter } from "./escalations.routes";
 import { analyticsRouter } from "./analytics.routes";
 import { notificationsRouter } from "./notifications.routes";
 import { settingsRouter } from "./settings.routes";
+import { cronRouter } from "./cron.routes";
 import { publicRuntimeConfig } from "../config/env";
 import { prisma } from "../lib/prisma";
 
@@ -42,3 +43,4 @@ apiRouter.use("/escalations", escalationsRouter);
 apiRouter.use("/analytics", analyticsRouter);
 apiRouter.use("/notifications", notificationsRouter);
 apiRouter.use("/settings", settingsRouter);
+apiRouter.use("/cron", cronRouter);

@@ -8,6 +8,14 @@ export const tokenStore = {
   clear: () => localStorage.removeItem(TOKEN_KEY),
 };
 
+/**
+ * Where the API lives. Empty in dev (Vite proxies /api to :4000) and when the
+ * API is same-origin. Set VITE_API_BASE_URL to the backend's URL when the
+ * frontend and backend are deployed as separate origins (e.g. two Vercel
+ * projects). Trailing slash is trimmed so `${API_BASE}/api/...` stays clean.
+ */
+const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/$/, "");
+
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -25,7 +33,7 @@ export const onUnauthorized = { handler: null as null | (() => void) };
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const token = tokenStore.get();
 
-  const response = await fetch(`/api${path}`, {
+  const response = await fetch(`${API_BASE}/api${path}`, {
     ...init,
     headers: {
       ...(init.body ? { "Content-Type": "application/json" } : {}),
