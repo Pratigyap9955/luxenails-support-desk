@@ -1,0 +1,94 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-cream-100 text-ink-700 font-sans antialiased;
+    margin: 0;
+  }
+
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Slim, on-brand scrollbars */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-blush-200;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-blush-300;
+    background-clip: content-box;
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-blush-400 ring-offset-2 ring-offset-cream-100;
+  }
+}
+
+@layer components {
+  /* min-w-0: a card is usually a grid/flex item, and the default min-width:auto
+     lets its min-content width push the track wider than the viewport. */
+  .card {
+    @apply min-w-0 rounded-2xl border border-blush-100 bg-white shadow-soft;
+  }
+
+  .card-hover {
+    @apply transition-all duration-200 hover:-translate-y-0.5 hover:border-blush-200 hover:shadow-lift;
+  }
+
+  .label {
+    @apply mb-1.5 block text-xs font-semibold uppercase tracking-[0.09em] text-ink-400;
+  }
+
+  .field {
+    @apply w-full rounded-xl border border-blush-200 bg-white px-3.5 py-2.5 text-sm text-ink-700
+           placeholder:text-ink-400/70 transition
+           focus:border-blush-400 focus:outline-none focus:ring-4 focus:ring-blush-100;
+  }
+
+  .section-title {
+    @apply font-display text-lg font-600 text-plum-800;
+  }
+
+  /* Loading placeholder */
+  .skeleton {
+    @apply rounded-lg bg-gradient-to-r from-blush-50 via-cream-200 to-blush-50 bg-[length:1000px_100%] animate-shimmer;
+  }
+}
+
+@layer utilities {
+  .font-600 {
+    font-weight: 600;
+  }
+  .text-balance {
+    text-wrap: balance;
+  }
+  /* Hide scrollbar but keep scrolling — used on horizontal filter rails */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}

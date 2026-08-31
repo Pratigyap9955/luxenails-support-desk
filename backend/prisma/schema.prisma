@@ -1,0 +1,397 @@
+// LUXENAILS — AI Customer Support Desk
+// PostgreSQL + Prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────── Enums ───────────────────────────
+
+enum Role {
+  ADMIN
+  MANAGER
+  AGENT
+}
+
+enum CustomerTier {
+  DIAMOND
+  PLATINUM
+  GOLD
+  SILVER
+  NEW
+}
+
+enum Channel {
+  EMAIL
+  CHAT
+  INSTAGRAM
+  PHONE
+  WEB_FORM
+  SMS
+}
+
+enum TicketStatus {
+  NEW
+  TRIAGED
+  IN_PROGRESS
+  WAITING_ON_CUSTOMER
+  ESCALATED
+  RESOLVED
+  CLOSED
+}
+
+enum Priority {
+  URGENT
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum Category {
+  BOOKING
+  CANCELLATION
+  REFUND
+  COMPLAINT
+  SERVICE_QUESTION
+  PRODUCT_QUESTION
+  AFTERCARE
+  PRICING
+  GIFT_CARD
+  MEMBERSHIP
+  FEEDBACK
+  OTHER
+}
+
+enum Sentiment {
+  DELIGHTED
+  POSITIVE
+  NEUTRAL
+  FRUSTRATED
+  ANGRY
+}
+
+enum AuthorType {
+  CUSTOMER
+  AGENT
+  AI
+  SYSTEM
+}
+
+enum DraftStatus {
+  PENDING
+  APPROVED
+  EDITED
+  REJECTED
+}
+
+enum EscalationLevel {
+  L1_SENIOR_AGENT
+  L2_SHIFT_MANAGER
+  L3_SALON_DIRECTOR
+}
+
+enum EscalationStatus {
+  OPEN
+  ACKNOWLEDGED
+  RESOLVED
+}
+
+enum SlaState {
+  ON_TRACK
+  AT_RISK
+  BREACHED
+  MET
+}
+
+enum AlertStatus {
+  SENT
+  SIMULATED
+  FAILED
+}
+
+enum NotificationType {
+  TICKET_CREATED
+  SLA_WARNING
+  SLA_BREACH
+  ESCALATION
+  DRAFT_READY
+  MENTION
+  RESOLUTION
+}
+
+// ─────────────────────────── Models ──────────────────────────
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         Role     @default(AGENT)
+  title        String?
+  avatarHue    Int      @default(340)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  assignedTickets Ticket[]       @relation("TicketAssignee")
+  messages        Message[]
+  approvedDrafts  ReplyDraft[]   @relation("DraftApprover")
+  notifications   Notification[]
+  events          TicketEvent[]
+
+  @@index([role])
+}
+
+model Customer {
+  id            String       @id @default(cuid())
+  name          String
+  email         String       @unique
+  phone         String?
+  tier          CustomerTier @default(NEW)
+  notes         String?
+  tags          String[]     @default([])
+  totalVisits   Int          @default(0)
+  lifetimeValue Float        @default(0)
+  preferredTech String?
+  allergies     String?
+  lastVisitAt   DateTime?
+  joinedAt      DateTime     @default(now())
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  tickets Ticket[]
+
+  @@index([tier])
+  @@index([email])
+}
+
+model Ticket {
+  id      String @id @default(cuid())
+  number  Int    @unique @default(autoincrement())
+  subject String
+
+  channel  Channel      @default(EMAIL)
+  status   TicketStatus @default(NEW)
+  priority Priority     @default(MEDIUM)
+  category Category     @default(OTHER)
+
+  sentiment      Sentiment @default(NEUTRAL)
+  sentimentScore Float     @default(0) // -1 (furious) .. +1 (delighted)
+
+  // AI triage output
+  triagedByAi     Boolean   @default(false)
+  aiConfidence    Float?
+  aiSummary       String?
+  aiIntent        String?
+  aiSuggestedTags String[]  @default([])
+  aiReasoning     String?
+  triagedAt       DateTime?
+
+  tags String[] @default([])
+
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  assigneeId String?
+  assignee   User?   @relation("TicketAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+
+  // SLA
+  slaPolicyId        String?
+  slaPolicy          SlaPolicy? @relation(fields: [slaPolicyId], references: [id], onDelete: SetNull)
+  firstResponseDueAt DateTime?
+  resolutionDueAt    DateTime?
+  firstResponseAt    DateTime?
+  resolvedAt         DateTime?
+  slaState           SlaState   @default(ON_TRACK)
+  firstResponseMet   Boolean?
+  resolutionMet      Boolean?
+  breachNotifiedAt   DateTime?
+  warningNotifiedAt  DateTime?
+
+  isEscalated Boolean @default(false)
+
+  csatScore Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  messages     Message[]
+  drafts       ReplyDraft[]
+  escalations  Escalation[]
+  events       TicketEvent[]
+  notifications Notification[]
+
+  @@index([status])
+  @@index([priority])
+  @@index([category])
+  @@index([slaState])
+  @@index([customerId])
+  @@index([assigneeId])
+  @@index([createdAt])
+}
+
+model Message {
+  id         String     @id @default(cuid())
+  ticketId   String
+  ticket     Ticket     @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  authorType AuthorType
+  authorId   String?
+  author     User?      @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  authorName String
+  body       String
+  isInternal Boolean    @default(false)
+  createdAt  DateTime   @default(now())
+
+  @@index([ticketId, createdAt])
+}
+
+model ReplyDraft {
+  id       String @id @default(cuid())
+  ticketId String
+  ticket   Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  body       String
+  finalBody  String?
+  status     DraftStatus @default(PENDING)
+  confidence Float       @default(0)
+  tone       String      @default("warm-professional")
+  model      String      @default("demo-engine")
+  // Array of { articleId, title, snippet, score }
+  citations  Json        @default("[]")
+  generatedBy String     @default("AI")
+
+  approvedById String?
+  approvedBy   User?     @relation("DraftApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  reviewedAt   DateTime?
+  rejectionReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([ticketId])
+  @@index([status])
+}
+
+model KnowledgeArticle {
+  id        String   @id @default(cuid())
+  title     String
+  slug      String   @unique
+  category  String
+  content   String
+  summary   String?
+  tags      String[] @default([])
+  published Boolean  @default(true)
+  views     Int      @default(0)
+  useCount  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  chunks KnowledgeChunk[]
+
+  @@index([category])
+  @@index([published])
+}
+
+/// One embedded slice of an article. `embedding` holds the vector as a
+/// PostgreSQL float8[]; cosine similarity is computed at query time.
+model KnowledgeChunk {
+  id        String           @id @default(cuid())
+  articleId String
+  article   KnowledgeArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  ordinal   Int
+  content   String
+  embedding Float[]
+  dims      Int              @default(0)
+  createdAt DateTime         @default(now())
+
+  @@index([articleId])
+}
+
+model SlaPolicy {
+  id                String   @id @default(cuid())
+  name              String
+  priority          Priority @unique
+  firstResponseMins Int
+  resolutionMins    Int
+  businessHoursOnly Boolean  @default(false)
+  escalateAfterMins Int // minutes past resolution due before auto-escalation
+  active            Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  tickets Ticket[]
+}
+
+model Escalation {
+  id       String @id @default(cuid())
+  ticketId String
+  ticket   Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  level      EscalationLevel  @default(L1_SENIOR_AGENT)
+  status     EscalationStatus @default(OPEN)
+  reason     String
+  trigger    String // "SLA_BREACH" | "SENTIMENT" | "MANUAL" | "VIP_URGENT"
+  slackSent  Boolean          @default(false)
+  acknowledgedBy String?
+  triggeredAt DateTime        @default(now())
+  resolvedAt  DateTime?
+
+  @@index([status])
+  @@index([ticketId])
+}
+
+model SlackAlert {
+  id        String      @id @default(cuid())
+  channel   String
+  title     String
+  text      String
+  payload   Json        @default("{}")
+  status    AlertStatus @default(SIMULATED)
+  error     String?
+  ticketNumber Int?
+  createdAt DateTime    @default(now())
+
+  @@index([createdAt])
+}
+
+model Notification {
+  id       String           @id @default(cuid())
+  userId   String?
+  user     User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ticketId String?
+  ticket   Ticket?          @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  type     NotificationType
+  title    String
+  body     String
+  read     Boolean          @default(false)
+  createdAt DateTime        @default(now())
+
+  @@index([userId, read])
+  @@index([createdAt])
+}
+
+model TicketEvent {
+  id       String @id @default(cuid())
+  ticketId String
+  ticket   Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  actorId  String?
+  actor    User?  @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  actorName String @default("System")
+  type     String // TRIAGED | STATUS_CHANGED | ASSIGNED | DRAFT_GENERATED | ...
+  message  String
+  meta     Json   @default("{}")
+  createdAt DateTime @default(now())
+
+  @@index([ticketId, createdAt])
+}
+
+model Setting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}

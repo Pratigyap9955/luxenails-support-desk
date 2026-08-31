@@ -1,0 +1,22 @@
+{
+  "name": "luxenails-support-desk",
+  "version": "1.0.0",
+  "private": true,
+  "description": "LUXENAILS — AI Customer Support Desk for a premium nail salon",
+  "scripts": {
+    "install:all": "npm install --prefix backend && npm install --prefix frontend",
+    "setup": "npm run install:all && npm run db:setup",
+    "db:setup": "npm run prisma:generate --prefix backend && npm run prisma:push --prefix backend && npm run seed --prefix backend",
+    "dev": "concurrently -n api,web -c magenta,cyan \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
+    "dev:api": "npm run dev --prefix backend",
+    "dev:web": "npm run dev --prefix frontend",
+    "build": "npm run build --prefix backend && npm run build --prefix frontend",
+    "seed": "npm run seed --prefix backend"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
