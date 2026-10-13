@@ -93,16 +93,31 @@ drop policy if exists "Public can view active services" on public.services;
 create policy "Public can view active services" on public.services for select to anon, authenticated using (is_active = true);
 drop policy if exists "Public can view published reviews" on public.reviews;
 create policy "Public can view published reviews" on public.reviews for select to anon, authenticated using (is_published = true);
+create or replace function public.has_role(required_roles text[])
+returns boolean
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $
+  select exists (
+    select 1 from public.profiles p
+    where p.id = auth.uid() and p.role = any(required_roles)
+  );
+$;
+revoke all on function public.has_role(text[]) from public;
+grant execute on function public.has_role(text[]) to authenticated;
+
 drop policy if exists "Users can read own profile" on public.profiles;
-create policy "Users can read own profile" on public.profiles for select to authenticated using (id = auth.uid());
+create policy "Users can read own profile" on public.profiles for select to authenticated using (id = auth.uid() or public.has_role(array['admin']));
 drop policy if exists "Admins can manage services" on public.services;
-create policy "Admins can manage services" on public.services for all to authenticated using (exists(select 1 from public.profiles p where p.id=auth.uid() and p.role='admin')) with check (exists(select 1 from public.profiles p where p.id=auth.uid() and p.role='admin'));
+create policy "Admins can manage services" on public.services for all to authenticated using (public.has_role(array['admin'])) with check (public.has_role(array['admin']));
 drop policy if exists "Staff can read appointments" on public.appointments;
-create policy "Staff can read appointments" on public.appointments for select to authenticated using (exists(select 1 from public.profiles p where p.id=auth.uid() and p.role in ('staff','admin')));
+create policy "Staff can read appointments" on public.appointments for select to authenticated using (public.has_role(array['staff','admin']));
 drop policy if exists "Staff can update appointments" on public.appointments;
-create policy "Staff can update appointments" on public.appointments for update to authenticated using (exists(select 1 from public.profiles p where p.id=auth.uid() and p.role in ('staff','admin'))) with check (exists(select 1 from public.profiles p where p.id=auth.uid() and p.role in ('staff','admin')));
+create policy "Staff can update appointments" on public.appointments for update to authenticated using (public.has_role(array['staff','admin'])) with check (public.has_role(array['staff','admin']));
 drop policy if exists "Admins can manage profiles" on public.profiles;
-create policy "Admins can manage profiles" on public.profiles for all to authenticated using (exists(select 1 from public.profiles p where p.id=auth.uid() and p.role='admin')) with check (exists(select 1 from public.profiles p where p.id=auth.uid() and p.role='admin'));
+create policy "Admins can manage profiles" on public.profiles for all to authenticated using (public.has_role(array['admin'])) with check (public.has_role(array['admin']));
 
 -- Atomic booking function: serializes requests for the same calendar day, then checks
 -- all non-cancelled appointments for time overlap before inserting.
