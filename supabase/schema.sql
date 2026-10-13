@@ -46,10 +46,15 @@ create table if not exists public.appointments (
   starts_at timestamptz not null,
   ends_at timestamptz not null,
   notes text not null default '',
+  confirmation_email_sent_at timestamptz,
+  confirmation_email_claimed_at timestamptz,
   status text not null default 'Pending' check (status in ('Pending','Confirmed','Cancelled','Completed')),
   created_at timestamptz not null default now(),
   constraint appointment_positive_duration check (ends_at > starts_at)
 );
+alter table public.appointments add column if not exists confirmation_email_sent_at timestamptz;
+alter table public.appointments add column if not exists confirmation_email_claimed_at timestamptz;
+
 create index if not exists appointments_starts_at_idx on public.appointments(starts_at);
 create index if not exists appointments_customer_email_idx on public.appointments(lower(customer_email));
 
