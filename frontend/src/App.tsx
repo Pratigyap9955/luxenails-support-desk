@@ -1,6 +1,6 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
-import { BrowserRouter, Link, NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
-import { ArrowDownRight, ArrowRight, CalendarDays, Check, ChevronDown, Clock3, Gift, Heart, Instagram, MapPin, Menu, MessageCircle, Minus, Plus, Quote, ShieldCheck, Sparkles, Star, X } from "lucide-react";
+import { FormEvent, useEffect, useState } from "react";
+import { BrowserRouter, Link, NavLink, Route, Routes, useLocation } from "react-router-dom";
+import { ArrowDownRight, ArrowRight, CalendarDays, Check, Clock3, Gift, Heart, Instagram, MapPin, Menu, MessageCircle, Quote, ShieldCheck, Sparkles, Star, X } from "lucide-react";
 
 type Service = { id: string; name: string; category: string; description: string; price: number; duration: number; popular?: boolean };
 type Booking = { id: string; name: string; email: string; phone: string; service: string; date: string; time: string; price: number; status: string; createdAt: string };
