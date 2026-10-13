@@ -37,14 +37,14 @@ const gallery = [
 ];
 const image = (id:string,w=1000) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=${w}&q=85`;
 const readBookings = (): Booking[] => { try { return JSON.parse(localStorage.getItem("gg-bookings") || "[]"); } catch { return []; } };
-const money = (n:number) => \`₹\${n.toLocaleString("en-IN")}\`;
+const money = (n:number) => "₹" + n.toLocaleString("en-IN");
 function downloadCalendar(booking: Booking) {
  const service = services.find(s => s.name === booking.service);
- const start = new Date(\`\${booking.date}T\${booking.time}:00\`);
+ const start = new Date(booking.date + "T" + booking.time + ":00");
  const end = new Date(start.getTime() + (service?.duration || 30) * 60_000);
  const stamp = (d: Date) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
  const escape = (value: string) => value.replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/,/g, "\\,").replace(/;/g, "\\;");
- const content = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Gloss and Grace//Salon Appointment//EN","CALSCALE:GREGORIAN","BEGIN:VEVENT",\`UID:\${booking.id}@glossandgrace\`,\`DTSTAMP:\${stamp(new Date())}\`,\`DTSTART:\${stamp(start)}\`,\`DTEND:\${stamp(end)}\`,\`SUMMARY:\${escape("Gloss & Grace — " + booking.service)}\`,\`DESCRIPTION:\${escape("Appointment request for " + booking.name + ". Please wait for studio confirmation.")}\`,"END:VEVENT","END:VCALENDAR"].join("\\r\\n");
+ const content = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Gloss and Grace//Salon Appointment//EN","CALSCALE:GREGORIAN","BEGIN:VEVENT","UID:" + booking.id + "@glossandgrace","DTSTAMP:" + stamp(new Date()),"DTSTART:" + stamp(start),"DTEND:" + stamp(end),"SUMMARY:" + escape("Gloss & Grace — " + booking.service),"DESCRIPTION:" + escape("Appointment request for " + booking.name + ". Please wait for studio confirmation."),"END:VEVENT","END:VCALENDAR"].join("\r\n");
  const url = URL.createObjectURL(new Blob([content], {type:"text/calendar;charset=utf-8"}));
  const anchor = document.createElement("a"); anchor.href = url; anchor.download = "gloss-grace-appointment.ics"; anchor.click(); URL.revokeObjectURL(url);
 }
