@@ -19,13 +19,16 @@ The public pages include Home, Services & Pricing (18 services), Booking, Galler
    - `VITE_SUPABASE_ANON_KEY` = Supabase publishable/anon key only
 4. Rebuild the frontend.
 
-The booking form calls the Postgres RPC `book_appointment`. The function validates the service, serializes booking requests and rejects overlapping appointment times in the database. The browser-only fallback is for preview/demo only and is stored in localStorage; it is not shared between devices and cannot prevent cross-device double bookings.
+The booking form calls the Postgres RPC `book_appointment`. The function validates the service, serializes booking requests and rejects overlapping appointment times in the database. After a successful database booking, the frontend calls the `booking-confirmation` Edge Function to send a request receipt through Brevo. The browser-only fallback is for preview/demo only and is stored in localStorage; it is not shared between devices and cannot prevent cross-device double bookings. The success screen also provides a downloadable `.ics` calendar event and a WhatsApp link the customer opens manually.
 
 ## Still required before a real launch
 - Configure the studio's actual address, contact details, local timezone, opening hours, holidays, and appointment policy.
 - Configure Supabase Auth, create admin/staff users, and set their `profiles.role` securely. Never let a public client promote its own role.
-- Add an authenticated staff UI backed by the protected appointments policies; the current `/admin` page is a local demo preview only and is not a production admin system.
-- Configure a server-side email provider (for example, a Supabase Edge Function using a secret stored in Supabase, never in Vite/browser variables) to send confirmation messages. No email is sent by this frontend yet.
+- Create a Supabase Auth user for the studio owner, then insert a matching `profiles` row with role `admin` from the SQL Editor (use that user's Auth UUID). Create staff profiles similarly with the `staff` role. Never allow users to self-assign roles.
+- Add an authenticated staff UI backed by the protected appointments policies; the current `/admin` page is a local demo preview only and is not a production admin system. `My Bookings` is also a local-browser demo; it does not yet retrieve live appointments from Supabase.
+- Deploy the included Edge Function: `supabase functions deploy booking-confirmation`.
+- In Supabase Dashboard → Edge Functions → Secrets (or via the Supabase CLI), configure `BREVO_API_KEY`, `BREVO_SENDER_EMAIL`, and optionally `BREVO_SENDER_NAME`. Supabase supplies `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` to the function runtime. The Brevo sender address must be verified in Brevo. Never place the Brevo key in a `VITE_*` variable.
+- The Edge Function sends an email receipt for the request, not a guarantee that the appointment is confirmed. Scheduled reminder emails/WhatsApp messages are not configured.
 - Configure a scheduled server-side reminder job if email/calendar reminders are required. The current success screen offers a WhatsApp link the customer can open manually; it does not send scheduled WhatsApp messages.
 - Wire the contact form, reviews, newsletter, gift cards, and blog to secure server/database handlers before collecting real customer data.
 - Add tests, monitoring, backups, privacy/consent text, and accessibility checks before production use.
