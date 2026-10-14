@@ -60,3 +60,4 @@ Only a public Supabase anon/publishable key belongs in browser environment varia
 - `supabase/functions/booking-confirmation/index.ts` — server-side email receipt function
 - `SUPABASE_SETUP.md` — detailed setup and production checklist
 - `backend/` — original LUXENAILS AI customer-support API, retained from the prior project
+https://pratigyap9955.github.io/luxenails-support-desk/
